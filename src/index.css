@@ -1,0 +1,137 @@
+:root {
+  --primary: #007bff;
+  --bg: #f0f2f5;
+  --white: #ffffff;
+  --text: #333;
+  --border: #ddd;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.peer-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.peer-item {
+  padding: 15px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+
+.peer-item:hover {
+  background: #f8f9fa;
+}
+
+.peer-item.active {
+  background: #e7f1ff;
+  border-left: 4px solid var(--primary);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  padding: 15px 20px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.messages-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  max-width: 70%;
+  padding: 10px 15px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+}
+
+.message.received {
+  align-self: flex-start;
+  background: var(--white);
+  border: 1px solid var(--border);
+}
+
+.message.sent {
+  align-self: flex-end;
+  background: var(--primary);
+  color: white;
+}
+
+.input-area {
+  padding: 20px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  outline: none;
+}
+
+button {
+  padding: 10px 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #ccc;
+}
+
+.file-input-label {
+  padding: 10px;
+  background: #6c757d;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
