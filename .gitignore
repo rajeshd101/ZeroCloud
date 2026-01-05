@@ -1,9 +1,4 @@
-node_modules/
-dist/
-dist_electron/
-release/
 .DS_Store
 *.log
 *.env
 .vscode/
-out/
