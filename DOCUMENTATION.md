@@ -1,32 +1,46 @@
-# ZeroCloud (ZC) Documentation
+# ZeroCloud Documentation
 
-ZeroCloud is a secure, cross-platform application designed for seamless communication and file sharing over a Local Area Network (LAN).
+This directory contains comprehensive documentation for ZeroCloud.
 
-## Features
+## Quick Start
 
-- **Automatic Peer Discovery**: Uses mDNS to find other ZeroCloud instances on your network automatically.
-- **Encrypted Messaging**: All messages are encrypted using AES-256 before being sent over the network.
-- **Direct File Transfer**: Send files of any size directly to peers.
-- **Privacy Focused**: All data stays within your local network. No cloud servers are involved.
-- **Cross-Platform**: Compatible with Windows, macOS, and Linux.
-
-## Getting Started
-
-1. **Launch ZeroCloud**: Open the application on two or more systems connected to the same LAN.
-2. **Discovery**: Wait a few seconds for the application to discover other peers. They will appear in the sidebar.
-3. **Select a Peer**: Click on a system name in the sidebar to start a conversation.
-4. **Chat**: Type your message and press Enter or click Send. Your messages are encrypted end-to-end.
-5. **Send Files**: Click the paperclip icon (📎) to select a file and send it to the selected peer.
-
-## File Storage
-
-Received files are automatically saved to a folder named `ZeroCloudDownloads` in your system's Home directory.
+1. **Installation**: Download from [releases](https://github.com/rajeshd101/ZeroCloud/releases) or build from source
+2. **Setup**: Run ZeroCloud on devices you want to connect
+3. **Discovery**: Devices automatically discover each other on the same network
+4. **Transfer**: Drag and drop files to share securely
 
 ## Security
 
-ZeroCloud uses a shared secret key for AES encryption of all chat messages. This ensures that even if network traffic is intercepted, your messages remain private.
+ZeroCloud uses AES-256 encryption for all file transfers. Files are encrypted before transmission and decrypted only on the receiving device. No data is stored in the cloud or transmitted over the internet.
 
-## Author
+## Network Requirements
 
-**Raj D**
-Email: [drajesh@hotmail.com](mailto:drajesh@hotmail.com)
+- All devices must be on the same local network
+- Multicast DNS (mDNS) must be enabled
+- Firewall may need to allow ZeroCloud connections
+
+## Troubleshooting
+
+### Device Not Found
+- Ensure both devices are on the same network
+- Check firewall settings
+- Restart the application
+
+### Transfer Failed
+- Check available disk space
+- Verify network connection
+- Try smaller files first
+
+### Performance Issues
+- Close other network-intensive applications
+- Use wired connection for large files
+- Check network bandwidth
+
+## Technical Details
+
+- **Encryption**: AES-256-CBC
+- **Discovery**: Multicast DNS (Bonjour/Avahi)
+- **Communication**: WebSocket (Socket.io)
+- **Platforms**: Windows, macOS, Linux
+
+For more detailed information, see the main [README](../README.md).
