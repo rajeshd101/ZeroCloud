@@ -28,7 +28,8 @@
         "nsis",
         "portable"
       ],
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "cscLink": null
     },
     "linux": {
       "target": [

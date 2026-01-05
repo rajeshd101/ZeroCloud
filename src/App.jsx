@@ -3,9 +3,11 @@ import { encryptMessage, decryptMessage } from './cryptoUtils';
 const { ipcRenderer } = window.require('electron');
 
 function App() {
-  const [myInfo, setMyInfo] = useState({ hostname: '', ip: '' });
+  const [myInfo, setMyInfo] = useState({ hostname: '', ip: '', availableIps: [], currentListeningIp: '0.0.0.0', port: 4568 });
   const [peers, setPeers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedPeer, setSelectedPeer] = useState(null);
+  const [showIpSelector, setShowIpSelector] = useState(true);
   const [messages, setMessages] = useState({}); // { hostname: [messages] }
   const [inputText, setInputText] = useState('');
   const fileInputRef = useRef(null);
@@ -29,6 +31,11 @@ function App() {
 
     ipcRenderer.on('toggle-help', () => {
       setShowHelp(prev => !prev);
+    });
+
+    ipcRenderer.on('open-settings', () => {
+      setShowIpSelector(true);
+      setShowHelp(false);
     });
 
     ipcRenderer.on('chat-history-loaded', (event, { peerHostname, history }) => {
@@ -104,6 +111,11 @@ function App() {
 
   const [showHelp, setShowHelp] = useState(false);
 
+  const filteredPeers = peers.filter(peer => 
+    peer.hostname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    peer.ip.includes(searchTerm)
+  );
+
   useEffect(() => {
     if (selectedPeer) {
       ipcRenderer.send('load-chat-history', selectedPeer.hostname);
@@ -121,16 +133,136 @@ function App() {
     }
   };
 
+  const handleIpChange = (e) => {
+    ipcRenderer.send('change-listening-ip', e.target.value);
+  };
+
+  const handlePortChange = (e) => {
+    ipcRenderer.send('change-port', e.target.value);
+  };
+
+  const confirmIpSelection = () => {
+    setShowIpSelector(false);
+  };
+
+  if (showIpSelector) {
+    return (
+      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5', height: '100vh' }}>
+        <div style={{ 
+          background: 'white', 
+          padding: '30px', 
+          borderRadius: '8px', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          width: '400px',
+          textAlign: 'center'
+        }}>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '10px' }}>ZeroCloud Configuration</h2>
+          <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '20px' }}>Configure your network settings for discovery and file sharing.</p>
+          
+          {myInfo.availableIps.length === 0 ? (
+            <div style={{ padding: '20px', color: '#888' }}>Detecting network interfaces...</div>
+          ) : (
+            <>
+              <div style={{ textAlign: 'left', marginBottom: '15px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Network Interface:</label>
+                <select 
+                  value={myInfo.currentListeningIp} 
+                  onChange={handleIpChange}
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #ddd',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <option value="0.0.0.0">All Interfaces (Recommended)</option>
+                  {myInfo.availableIps.map(ip => (
+                    <option key={ip.address} value={ip.address}>{ip.name}: {ip.address}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Port:</label>
+                <input 
+                  type="number" 
+                  value={myInfo.port} 
+                  onChange={handlePortChange}
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #ddd',
+                    fontSize: '0.9rem'
+                  }}
+                />
+              </div>
+              
+              <button 
+                onClick={confirmIpSelection}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px', 
+                  background: 'var(--primary)', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Apply & Start
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <div className="sidebar">
         <div className="sidebar-header">
           <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--primary)' }}>{myInfo.hostname}</div>
           <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px' }}>{myInfo.ip}</div>
+          <div style={{ marginTop: '10px' }}>
+            <button 
+              onClick={() => setShowIpSelector(true)}
+              style={{ 
+                fontSize: '0.7rem', 
+                width: '100%', 
+                padding: '5px',
+                background: '#f8f9fa',
+                border: '1px solid #ddd',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              ⚙️ Network Settings
+            </button>
+          </div>
+        </div>
+        <div className="search-container" style={{ padding: '10px' }}>
+          <input 
+            type="text" 
+            placeholder="Search peers..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '8px', 
+              borderRadius: '4px', 
+              border: '1px solid #ddd',
+              fontSize: '0.8rem'
+            }}
+          />
         </div>
         <div className="peer-list">
           {peers.length === 0 && <div style={{ padding: 20, fontSize: '0.8rem', color: '#999' }}>Searching for peers...</div>}
-          {peers.map((peer, index) => (
+          {peers.length > 0 && filteredPeers.length === 0 && <div style={{ padding: 20, fontSize: '0.8rem', color: '#999' }}>No peers match your search.</div>}
+          {filteredPeers.map((peer, index) => (
             <div 
               key={`${peer.hostname}-${peer.ip}-${index}`} 
               className={`peer-item ${selectedPeer?.ip === peer.ip ? 'active' : ''}`}
