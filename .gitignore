@@ -1,4 +1,39 @@
+# System files
 .DS_Store
 *.log
 *.env
 .vscode/
+
+# Build outputs
+dist/
+dist_electron/
+build/
+out/
+
+# Dependencies
+node_modules/
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.exe
+*.msi
+*.app
+*.AppImage
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
