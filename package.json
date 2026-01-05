@@ -27,7 +27,8 @@
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "forceCodeSigning": false
     },
     "linux": {
       "target": [

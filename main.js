@@ -20,19 +20,26 @@ const CHAT_HISTORY_DIR = path.join(os.homedir(), 'ZeroCloudHistory');
 fs.ensureDirSync(DOWNLOADS_DIR);
 fs.ensureDirSync(CHAT_HISTORY_DIR);
 
-// Single Instance Lock
-const gotTheLock = app.requestSingleInstanceLock();
-
-if (!gotTheLock) {
-  app.quit();
-} else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
-  });
+// Single Instance Lock - only after app is ready
+function initializeApp() {
+  const gotTheLock = app.requestSingleInstanceLock();
+  
+  if (!gotTheLock) {
+    app.quit();
+  } else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      }
+    });
+    
+    createWindow();
+    startDiscovery();
+  }
 }
+
+app.whenReady().then(initializeApp);
 
 // Express setup for file transfers
 const expressApp = express();
@@ -58,9 +65,9 @@ expressApp.post('/upload', upload.single('file'), (req, res) => {
 });
 
 function startServer(port) {
-  server.listen(port, () => {
+  server.listen(port, '0.0.0.0', () => {
     currentSocketPort = port;
-    console.log(`Socket/File server running on port ${currentSocketPort}`);
+    console.log(`Socket/File server running on all interfaces port ${currentSocketPort}`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.log(`Port ${port} in use, trying ${port + 1}...`);
@@ -185,11 +192,6 @@ function createWindow() {
     mainWindow = null;
   });
 }
-
-app.whenReady().then(() => {
-  createWindow();
-  startDiscovery();
-});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
