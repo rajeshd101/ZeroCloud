@@ -94,19 +94,25 @@ const peers = new Map();
 function startDiscovery() {
   console.log('Starting mDNS discovery...');
 
-  mdns.on('warning', (err) => {
-    console.warn('mDNS Warning:', err);
+mdns.on('warning', (err) => {
+    // Suppress common mDNS warnings about bad labels
+    if (!err.message || !err.message.includes('Cannot decode name (bad label)')) {
+      console.warn('mDNS Warning:', err);
+    }
   });
 
   mdns.on('error', (err) => {
-    console.error('mDNS Error:', err);
+    // Suppress common mDNS errors about bad labels
+    if (!err.message || !err.message.includes('Cannot decode name (bad label)')) {
+      console.error('mDNS Error:', err);
+    }
   });
 
-  mdns.on('response', (response) => {
+mdns.on('response', (response) => {
     if (!response.answers) return;
 
     response.answers.forEach(a => {
-      if (a.name === SERVICE_NAME && a.type === 'TXT') {
+      if (a.name && a.name.toLowerCase() === SERVICE_NAME.toLowerCase() && a.type === 'TXT') {
         try {
           // TXT data can be a Buffer or an array of Buffers
           let rawData = a.data;
@@ -114,28 +120,30 @@ function startDiscovery() {
             rawData = Buffer.concat(rawData.map(b => Buffer.isBuffer(b) ? b : Buffer.from(b)));
           }
           
-          const data = JSON.parse(rawData.toString());
-          const peerIp = response.referer ? response.referer.address : null;
+          if (rawData && rawData.length > 0) {
+            const data = JSON.parse(rawData.toString());
+            const peerIp = response.referer ? response.referer.address : null;
 
-          if (data.hostname && data.hostname !== HOSTNAME && peerIp) {
-            console.log(`Found peer: ${data.hostname} at ${peerIp}`);
-            peers.set(data.hostname, {
-              hostname: data.hostname,
-              ip: peerIp,
-              port: data.port || 4568,
-              lastSeen: Date.now()
-            });
-            updatePeers();
+            if (data.hostname && data.hostname !== HOSTNAME && peerIp) {
+              console.log(`Found peer: ${data.hostname} at ${peerIp}`);
+              peers.set(data.hostname, {
+                hostname: data.hostname,
+                ip: peerIp,
+                port: data.port || 4568,
+                lastSeen: Date.now()
+              });
+              updatePeers();
+            }
           }
         } catch (e) {
-          console.error('Error parsing peer data:', e);
+          // Silently ignore parsing errors to reduce noise
         }
       }
     });
   });
 
-  mdns.on('query', (query) => {
-    if (query.questions && query.questions.some(q => q.name === SERVICE_NAME)) {
+mdns.on('query', (query) => {
+    if (query.questions && query.questions.some(q => q.name && q.name.toLowerCase() === SERVICE_NAME.toLowerCase())) {
       console.log('Received query for ZeroCloud, responding...');
       mdns.respond({
         answers: [{

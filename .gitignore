@@ -9,6 +9,8 @@ dist/
 dist_electron/
 build/
 out/
+dist_standalone/
+ZeroCloud-Windows-Standalone/
 
 # Dependencies
 node_modules/
