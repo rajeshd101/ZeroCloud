@@ -27,7 +27,7 @@ fs.ensureDirSync(CHAT_HISTORY_DIR);
 // Single Instance Lock - only after app is ready
 function initializeApp() {
   const gotTheLock = app.requestSingleInstanceLock();
-  
+
   if (!gotTheLock) {
     app.quit();
   } else {
@@ -37,7 +37,7 @@ function initializeApp() {
         mainWindow.focus();
       }
     });
-    
+
     createWindow();
     startDiscovery();
   }
@@ -68,6 +68,15 @@ expressApp.post('/upload', upload.single('file'), (req, res) => {
   }
 });
 
+
+expressApp.get('/info', (req, res) => {
+  res.json({
+    hostname: HOSTNAME,
+    service: SERVICE_NAME,
+    version: '1.0.0'
+  });
+});
+
 function startServer(port, ip = '0.0.0.0') {
   if (server.listening) {
     server.close();
@@ -94,7 +103,7 @@ const peers = new Map();
 function startDiscovery() {
   console.log('Starting mDNS discovery...');
 
-mdns.on('warning', (err) => {
+  mdns.on('warning', (err) => {
     // Suppress common mDNS warnings about bad labels
     if (!err.message || !err.message.includes('Cannot decode name (bad label)')) {
       console.warn('mDNS Warning:', err);
@@ -108,7 +117,7 @@ mdns.on('warning', (err) => {
     }
   });
 
-mdns.on('response', (response) => {
+  mdns.on('response', (response) => {
     if (!response.answers) return;
 
     response.answers.forEach(a => {
@@ -119,7 +128,7 @@ mdns.on('response', (response) => {
           if (Array.isArray(rawData)) {
             rawData = Buffer.concat(rawData.map(b => Buffer.isBuffer(b) ? b : Buffer.from(b)));
           }
-          
+
           if (rawData && rawData.length > 0) {
             const data = JSON.parse(rawData.toString());
             const peerIp = response.referer ? response.referer.address : null;
@@ -142,7 +151,7 @@ mdns.on('response', (response) => {
     });
   });
 
-mdns.on('query', (query) => {
+  mdns.on('query', (query) => {
     if (query.questions && query.questions.some(q => q.name && q.name.toLowerCase() === SERVICE_NAME.toLowerCase())) {
       console.log('Received query for ZeroCloud, responding...');
       mdns.respond({
@@ -164,12 +173,28 @@ mdns.on('query', (query) => {
     }]
   });
 
-  // Broadcast query every 5 seconds
-  setInterval(() => {
+  // IMMEDIATE DISCOVERY: Burst of queries to ensure we find peers ASAP
+  // This fixes the issue where we waited 5 seconds for the first query
+  const query = () => {
     mdns.query({
       questions: [{ name: SERVICE_NAME, type: 'TXT' }]
     });
-  }, 5000);
+  };
+
+  // 1. Query immediately
+  query();
+
+  // 2. Query after 500ms (in case of UDP packet loss)
+  setTimeout(query, 500);
+
+  // 3. Query after 1000ms
+  setTimeout(query, 1000);
+
+  // 4. Query after 2000ms
+  setTimeout(query, 2000);
+
+  // Broadcast query every 5 seconds (long term maintenance)
+  setInterval(query, 5000);
 
   // Cleanup old peers (optional but good for reliability)
   setInterval(() => {
@@ -266,7 +291,7 @@ ipcMain.on('get-my-info', (event) => {
   const networkInterfaces = os.networkInterfaces();
   const ips = [];
   let defaultIp = '127.0.0.1';
-  
+
   for (const interfaceName in networkInterfaces) {
     for (const iface of networkInterfaces[interfaceName]) {
       if (iface.family === 'IPv4' && !iface.internal) {
@@ -275,9 +300,9 @@ ipcMain.on('get-my-info', (event) => {
       }
     }
   }
-  
-  event.reply('my-info', { 
-    hostname: HOSTNAME, 
+
+  event.reply('my-info', {
+    hostname: HOSTNAME,
     ip: currentListeningIp === '0.0.0.0' ? defaultIp : currentListeningIp,
     availableIps: ips,
     currentListeningIp: currentListeningIp,
@@ -298,8 +323,8 @@ ipcMain.on('change-listening-ip', (event, ip) => {
       }
     }
   }
-  event.reply('my-info', { 
-    hostname: HOSTNAME, 
+  event.reply('my-info', {
+    hostname: HOSTNAME,
     ip: ip === '0.0.0.0' ? (ips[0]?.address || '127.0.0.1') : ip,
     availableIps: ips,
     currentListeningIp: ip,
@@ -312,7 +337,7 @@ ipcMain.on('change-port', (event, port) => {
   if (isNaN(newPort)) return;
   console.log(`Changing port to ${newPort}`);
   startServer(newPort, currentListeningIp);
-  
+
   const networkInterfaces = os.networkInterfaces();
   const ips = [];
   let defaultIp = '127.0.0.1';
@@ -324,9 +349,9 @@ ipcMain.on('change-port', (event, port) => {
       }
     }
   }
-  
-  event.reply('my-info', { 
-    hostname: HOSTNAME, 
+
+  event.reply('my-info', {
+    hostname: HOSTNAME,
     ip: currentListeningIp === '0.0.0.0' ? defaultIp : currentListeningIp,
     availableIps: ips,
     currentListeningIp: currentListeningIp,
@@ -351,6 +376,62 @@ ipcMain.on('delete-chat-history', (event, peerHostname) => {
   const filePath = path.join(CHAT_HISTORY_DIR, `${peerHostname}.json`);
   if (fs.existsSync(filePath)) {
     fs.removeSync(filePath);
+  }
+});
+
+ipcMain.on('manual-connect', async (event, ip) => {
+  // Try default port + few others if needed, but for now just default port or ask user
+  // For simplicity, we assume default port 4568 or we can scan
+  // We'll try to fetch /info from the IP on the current common ports
+
+  const targetPort = 4568; // We could make this configurable
+  console.log(`Attempting manual connection to ${ip}:${targetPort}`);
+
+  try {
+    // We need axios or node-fetch, but we have http module or just use electron's net
+    // Since we have express, we probably don't have axios installed. 
+    // We can use built-in http or just try socket.io connection directly.
+    // Let's try fetching /info first to verify it's a ZeroCloud peer
+
+    const { net } = require('electron');
+    const request = net.request(`http://${ip}:${targetPort}/info`);
+
+    request.on('response', (response) => {
+      if (response.statusCode === 200) {
+        let body = '';
+        response.on('data', (chunk) => {
+          body += chunk;
+        });
+        response.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (data.hostname) {
+              peers.set(data.hostname, {
+                hostname: data.hostname,
+                ip: ip,
+                port: targetPort,
+                lastSeen: Date.now()
+              });
+              updatePeers();
+              event.reply('manual-connect-success', { hostname: data.hostname });
+            }
+          } catch (e) {
+            event.reply('manual-connect-error', 'Invalid response from peer');
+          }
+        });
+      } else {
+        event.reply('manual-connect-error', `Connection failed: ${response.statusCode}`);
+      }
+    });
+
+    request.on('error', (err) => {
+      event.reply('manual-connect-error', `Unreachable: ${err.message}`);
+    });
+
+    request.end();
+
+  } catch (error) {
+    event.reply('manual-connect-error', error.message);
   }
 });
 
